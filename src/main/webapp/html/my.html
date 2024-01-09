@@ -4,9 +4,148 @@
     <script src=https://code.jquery.com/jquery-3.6.0.min.js></script>
     <link href="/css/my.css" rel="stylesheet">
 </head>
-<body>
+<body onload="showList(0)">
 <h1>RPG admin panel</h1>
 <h2>Accounts list:</h2>
+
+<label for="count">Count per page:</label>
+<select id="count" onchange="showList(0)">
+    <option value="3">3</option>
+    <option value="5">5</option>
+    <option value="10">10</option>
+    <option value="15">15</option>
+</select>
+
+<table id="DataTable">
+    <tr>
+        <th>#</th>
+        <th>Name</th>
+        <th>Title</th>
+        <th>Race</th>
+        <th>Profession</th>
+        <th>Level</th>
+        <th>Birthday</th>
+        <th>Banned</th>
+        <th>Edit</th>
+        <th>Delete</th>
+    </tr>
+</table>
+<div id="PagingButtons">
+    Pages:
+</div>
+<script>
+    function showList(pageNumber) {
+        $("tr:has(td)").remove();
+
+        let url = "/rest/players?";
+
+        let countPerPage = $('#count').val();
+
+        if (countPerPage == null) {
+            countPerPage = 3;
+        }
+
+        url = url.concat("pageSize=").concat(countPerPage);
+
+        if (pageNumber == null) {
+            pageNumber = 0;
+        }
+
+        url = url.concat("&pageNumber=").concat(pageNumber);
+
+        $.get(url, function (response) {
+            $.each(response, function (i, item) {
+                $('<tr>').html("<td>"
+                    + item.id + "</td><td>"
+                    + item.name + "</td><td>"
+                    + item.title + "</td><td>"
+                    + item.race + "</td><td>"
+                    + item.profession + "</td><td>"
+                    + item.level + "</td><td>"
+                    + new Date(item.birthday).toLocaleDateString() + "</td><td>"
+                    + item.banned + "</td><td>"
+                    + "<button id='buttonEdit_" + item.id + "' onclick='editAccount(" + item.id + ")'>"
+                    + "<img src='/img/edit.png'>"
+                    + "</button>" + "</td><td>"
+                    + "<button id='buttonDelete_" + item.id + "' onclick='deleteAccount(" + item.id + ")'>"
+                    + "<img src='/img/delete.png'>"
+                    + "</button>" + "</td>"
+                ).appendTo("#DataTable")
+            })
+        })
+
+        let totalCount = getTotalCount();
+
+        let pagesCount = Math.ceil(totalCount / countPerPage);
+
+        $('button.pgn-btn-styled').remove();
+
+        for (let i = 0; i < pagesCount; i++) {
+            let buttonTag = "<button>" + (i + 1) + "</button>";
+            let btn = $(buttonTag)
+                .attr('id', "pagingButton" + i)
+                .attr('onclick', "showList(" + i + ")")
+                .addClass('pgn-btn-styled')
+            $('#PagingButtons').append(btn);
+        }
+
+        let identifier = "#pagingButton" + pageNumber;
+
+        $(identifier).css("color", "red").css("font-weight", "bold");
+
+    }
+
+    function editAccount(id){
+        let identifierEdit = "#buttonEdit_" + id;
+        let identifierDelete = "#buttonDelete_" + id;
+
+        $(identifierDelete).remove();
+
+        let saveImageTag = "<img src='/img/save.png'>";
+
+        $(identifierEdit).html(saveImageTag);
+
+    }
+
+    function deleteAccount(id){
+        let url = "/rest/players/" + id;
+
+        $.ajax({
+            url: url,
+            async: false,
+            type: 'DELETE',
+            success: function (){
+                showList(getCurrentPage());
+            }
+        });
+    }
+
+    function getCurrentPage(){
+        let currentPage = 1;
+
+        $('button:parent(div)').each(function (){
+            if($(this).css('color') === 'rgb(255, 0, 0)'){
+                currentPage = $(this).text();
+            }
+        })
+        return parseInt(currentPage) - 1;
+    }
+
+    function getTotalCount() {
+        let url = "/rest/players/count"
+        let res = 0;
+
+        $.ajax({
+            url: url,
+            async: false,
+            success: function (result) {
+                res = parseInt(result);
+            }
+        })
+        console.log(res);
+        return res;
+    }
+</script>
 
 </body>
 </html>
